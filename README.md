@@ -14,5 +14,5 @@ Xiang 的 Venera 合并漫画源列表。
 ## 打补丁的源（2026-11-03）
 
 - 动漫屋 dm5 7.0.4：请求头加 `Accept-Encoding: identity`，修 Venera 搜索报 error decoding response body；其余与上游 7.0.3 相同，文件自托管在本仓库。
-- 栗子漫画 lizimh 1.2.4：API 域名由 http 改为 https；其余与上游 1.2.3 相同，文件自托管在本仓库。
+- 栗子漫画 lizimh 1.2.5：API 域名由 http 改为 https；探图失败时自动尝试全部图片线路（原代码只在第一条线路上失败就报错）；其余与上游 1.2.3 相同，文件自托管在本仓库。
 - 这两个源不再跟随上游 index 的 url，上游出新版时需重新打补丁再更新（每日同步已排除这两条的 url 覆盖）。
