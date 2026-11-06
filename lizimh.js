@@ -1,4 +1,4 @@
-// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-05): version 1.2.6. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.4 (rewritten 2.33.x code). No http->https change needed: upstream 1.2.4 already uses https API (mh.lizimh.net) with zero http:// occurrences. Old 1.2.5 retryImageLine patch not re-applied: upstream 1.2.4 already falls back across image lines per page (onImageLoad onLoadFailed -> nextLineUrl; resolvePageUrl tries all lines). Version is 1.2.6 rather than 1.2.5 so Venera sees it as newer than the previous 1.2.5 patch. Otherwise unchanged.
+// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-06): version 1.2.7. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.4 (rewritten 2.33.x code). No http->https change needed: upstream 1.2.4 already uses https API (mh.lizimh.net) with zero http:// occurrences. Old 1.2.5 retryImageLine patch re-applied in 1.2.7 form: probePages' "未取得有效正文图片" throw now carries retryImageLine=true, so repairedChapter retries the probe on the next image line instead of failing on the first (compatible) line. Without this, 1.2.6 probed only media.imgo.buzz for Yao Shen Ji ch.535 and errored at Lizimh:4309 even though other lines were never tried (log 2026-11-06 11:32). Version is 1.2.7 rather than 1.2.6 so Venera sees it as newer than the previous 1.2.6 patch. Otherwise unchanged.
 // Derived read-only Tencent chapter comments. Original source functions preserved.
 /** @type {import('./_venera_.js')} */
 
@@ -13,7 +13,7 @@ class Lizimh extends ComicSource {
     constructor() { super(); this.installRepair(); }
     name = "栗子漫画";
     key = "lizimh";
-    version = "1.2.6";
+    version = "1.2.7";
     minAppVersion = "1.2.2";
     url = "https://raw.githubusercontent.com/handahao666-boop/venera_comic_source/main/lizimh.js";
 
@@ -4306,7 +4306,7 @@ class LiziChapterMetadata {
                     values = await Promise.all(remaining.map(exists));
                     first = remaining.find((page, index) => values[index]) || 0;
                 }
-                if (!first) throw new Error("栗子：未取得有效正文图片，请刷新目录或更换可用线路。");
+                if (!first) { const e = new Error("栗子：未取得有效正文图片，请刷新目录或更换可用线路。"); e.retryImageLine = true; throw e; }
                 const grid = [];
                 for (let page = 25; page < limit; page += 25) grid.push(page);
                 if (!grid.includes(limit)) grid.push(limit);
