@@ -1,4 +1,4 @@
-// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-06): version 1.2.7. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.4 (rewritten 2.33.x code). No http->https change needed: upstream 1.2.4 already uses https API (mh.lizimh.net) with zero http:// occurrences. Old 1.2.5 retryImageLine patch re-applied in 1.2.7 form: probePages' "未取得有效正文图片" throw now carries retryImageLine=true, so repairedChapter retries the probe on the next image line instead of failing on the first (compatible) line. Without this, 1.2.6 probed only media.imgo.buzz for Yao Shen Ji ch.535 and errored at Lizimh:4309 even though other lines were never tried (log 2026-11-06 11:32). Version is 1.2.7 rather than 1.2.6 so Venera sees it as newer than the previous 1.2.6 patch. Otherwise unchanged.
+// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-06): version 1.2.8. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.4 (rewritten 2.33.x code). No http->https change needed: upstream 1.2.4 already uses https API (mh.lizimh.net) with zero http:// occurrences. 1.2.7 re-applied the probe-failure auto line retry (retryImageLine). 1.2.8 fixes the real root cause of Yao Shen Ji ch.534+ failing: from ch.534 the covers carry a $jp$ marker, and the server generator code maps $jp$ -> https://t1.imge.store (R2 public) and $jp$cf -> https://pic.lizimh.net, but officialImagePath strips the marker and the probe then looked on media.imgo.buzz, where those files do not exist (verified: t1 200, media.imgo.buzz 404 for ch.535 p1). 1.2.8: repairedChapter passes the marker through to probePages; lineAbs/abs resolve $jp$ to t1.imge.store and $jp$cf to pic.lizimh.net (per the live configv2 generator code); probePages builds probe URLs from the marker-prefixed dir. Version is 1.2.8 rather than 1.2.7 so Venera sees it as newer. Otherwise unchanged.
 // Derived read-only Tencent chapter comments. Original source functions preserved.
 /** @type {import('./_venera_.js')} */
 
@@ -13,7 +13,7 @@ class Lizimh extends ComicSource {
     constructor() { super(); this.installRepair(); }
     name = "栗子漫画";
     key = "lizimh";
-    version = "1.2.7";
+    version = "1.2.8";
     minAppVersion = "1.2.2";
     url = "https://raw.githubusercontent.com/handahao666-boop/venera_comic_source/main/lizimh.js";
 
@@ -3959,7 +3959,10 @@ class LiziChapterMetadata {
             const path = this.officialImagePath(cover);
             const match = path.match(/^(\/(?!\/)[^?#]*)\/(\d+)\.([A-Za-z0-9]+)$/);
             if (!match) throw new Error("栗子：该章使用新版图片文件名，无法从一张封面确定整章页数和顺序。" + (this._officialFailure[chapterId] || "请稍后刷新官方图片清单。"));
-            const images = await this.probePages(match[1], match[3], Number(this.loadSetting("maxPages") || 300));
+            // 1.2.8: keep the $jp$/$jp$cf marker so probePages resolves it to the
+            // marker host (t1.imge.store / pic.lizimh.net) instead of media.imgo.buzz.
+            const jpPrefix = String(cover).match(/^\$jp\$(?:cf)?/)?.[0] || "";
+            const images = await this.probePages(jpPrefix + match[1], match[3], Number(this.loadSetting("maxPages") || 300));
             if ((this._catalogEpoch[comicId] || 0) !== epoch) throw new Error("栗子：阅读缓存已清理，请重新打开章节。");
             const line = this.currentLine();
             for (const url of images) { this._imgLine[url] = line; this._imgPath[url] = this.officialImagePath(url); }
@@ -4185,6 +4188,21 @@ class LiziChapterMetadata {
         bytes[4] === 102 && bytes[5] === 116 && bytes[6] === 121 && bytes[7] === 112 && bytes[8] === 97 && bytes[9] === 118);
 
     proto.abs = function (value) { const url = previousAbs.call(this, value); return url ? clean(url) + marker : ""; };
+    // 1.2.8: generator markers resolve to their own hosts (live configv2 code:
+    // $jp$ -> https://t1.imge.store, $jp$cf -> https://pic.lizimh.net). The
+    // plain-image CDN does not host $jp$ files (verified 404 on media.imgo.buzz).
+    const previousLineAbs = proto.lineAbs;
+    proto.lineAbs = function (path, idx) {
+        const jp = String(path || "").match(/^\$jp\$(cf)?/);
+        if (jp) return (jp[1] ? "https://pic.lizimh.net" : "https://t1.imge.store") + this.officialImagePath(path);
+        return previousLineAbs.call(this, path, idx);
+    };
+    const previousAbs2 = proto.abs;
+    proto.abs = function (value) {
+        const jp = String(value || "").match(/^\$jp\$(cf)?/);
+        if (jp) return (jp[1] ? "https://pic.lizimh.net" : "https://t1.imge.store") + this.officialImagePath(value) + marker;
+        return previousAbs2.call(this, value);
+    };
     proto.nativeRecord = function (field, value) {
         this._nativeV23330[field] = value;
         if (field === "cover" || field === "body" || field === "chapter" || field === "home") {
@@ -4285,7 +4303,10 @@ class LiziChapterMetadata {
         const pending = (async () => {
             const memo = new Map();
             const checkEpoch = () => { if ((this._directoryEpoch[dir] || 0) !== epoch) throw new Error("栗子：阅读缓存已清理，请重新打开章节。"); };
-            const url = page => this.lineAbs(dir + "/" + page + "." + ext);
+            // 1.2.8: build probe URLs from rawDir (may carry a $jp$/$jp$cf marker)
+            // so lineAbs resolves it to t1.imge.store / pic.lizimh.net; dir stays
+            // the stripped path for cache keys.
+            const url = page => this.lineAbs(rawDir + "/" + page + "." + ext);
             const exists = page => {
                 if (page < 1 || page > limit + 2) return Promise.resolve(false);
                 if (!memo.has(page)) memo.set(page, this.imageState(url(page)).then(result => { checkEpoch(); return result; }));
