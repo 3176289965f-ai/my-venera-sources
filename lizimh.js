@@ -1,9 +1,9 @@
-// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-03): version 1.2.5, API hosts http -> https (http hosts unreachable); probePages failure now sets retryImageLine so repairedChapter auto-tries every image line instead of failing on the first line. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.3, otherwise unchanged.
+// PATCHED for 3176289965f-ai/my-venera-sources (2026-11-05): version 1.2.6. Upstream base: handahao666-boop/venera_comic_source lizimh.js 1.2.4 (rewritten 2.33.x code). No http->https change needed: upstream 1.2.4 already uses https API (mh.lizimh.net) with zero http:// occurrences. Old 1.2.5 retryImageLine patch not re-applied: upstream 1.2.4 already falls back across image lines per page (onImageLoad onLoadFailed -> nextLineUrl; resolvePageUrl tries all lines). Version is 1.2.6 rather than 1.2.5 so Venera sees it as newer than the previous 1.2.5 patch. Otherwise unchanged.
 // Derived read-only Tencent chapter comments. Original source functions preserved.
 /** @type {import('./_venera_.js')} */
 
 /**
- * 栗子漫画 (lizimh) 源 v1.2.3（基于 2.33.30 修复版）
+ * 栗子漫画 (lizimh) 源 v1.2.4（基于 Walter498 原源及 2.33.30 修复版）
  * API requests use the official path + Unix timestamp signature.
  * Public metadata endpoints do not need an account token. Chapter v3 uses
  * the user's authToken and remains subject to server account restrictions.
@@ -13,16 +13,18 @@ class Lizimh extends ComicSource {
     constructor() { super(); this.installRepair(); }
     name = "栗子漫画";
     key = "lizimh";
-    version = "1.2.5";
+    version = "1.2.6";
     minAppVersion = "1.2.2";
     url = "https://raw.githubusercontent.com/handahao666-boop/venera_comic_source/main/lizimh.js";
 
     // v2.32.0：回到最保守的寫法（App 的 QuickJS 引擎對 class 靜態 getter /
     // 複雜靜態欄位支援不佳，會導致整個源 init 失敗）。
-    // 主域名 + 備援域名，失敗時逐一重試，成功的那台記在 _apiOk 裡。
-    static api = "https://ai.xajtl.com";
-    static apiFallback = "https://ai.qsmm.fun";
+    // 原应用公开 TXT 配置当前只下发此 HTTPS 入口。保留旧字段，候选去重。
+    static api = "https://mh.lizimh.net";
+    static apiFallback = "https://mh.lizimh.net";
     static _useFallback = false;
+    static _discoveryFlight = null;
+    static _discoveryRetryAt = 0;
 
     // Application protocol constant, NOT a user's login credential.
     static signPrefix = "q2sIObYXCp2uBZgCNBlY93J3z67hK0wS";
@@ -619,7 +621,7 @@ class Lizimh extends ComicSource {
         // Writes always try the primary host first; the fallback host's DNS
         // has been dead, and a stale _useFallback flag used to send every POST
         // straight at it.
-        const bases = [Lizimh.api, Lizimh.apiFallback];
+        const bases = [Lizimh.api, Lizimh.apiFallback].filter((v, i, a) => a.indexOf(v) === i);
         let last = "請求失敗";
         for (const base of bases) {
             try {
@@ -680,47 +682,104 @@ class Lizimh extends ComicSource {
         throw new Error(last);
     };
 
-    static async getJson(path) {
+    static apiRequest(url, milliseconds = 8000) {
+        // Bounds waiting only; Venera does not expose cancellation of this request.
+        return new Promise((resolve, reject) => {
+            let finished = false;
+            const finish = (callback, value) => { if (!finished) { finished = true; callback(value); } };
+            Promise.resolve(Network.get(url, Lizimh.apiHeaders({ "cache-time": "no", "Cache-Control": "no-cache" })))
+                .then(value => finish(resolve, value), error => finish(reject, error));
+            setTimeout(() => finish(reject, new Error("连接超时")), milliseconds);
+        });
+    }
+
+    static decodeApiTxt(value) {
+        const encoded = String(value || "").replace(/["'\s]/g, "");
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length > 4096) throw new Error("域名配置格式异常");
+        const input = Convert.decodeBase64(encoded);
+        if (!input.byteLength || input.byteLength % 16) throw new Error("域名配置长度异常");
+        const bytes = new Uint8Array(Convert.decryptAesEcb(input, Convert.encodeUtf8("f8d992c74b29491d8a3e3fd5f07389d8")));
+        const padding = bytes[bytes.length - 1];
+        if (padding < 1 || padding > 16 || !bytes.slice(-padding).every(x => x === padding)) throw new Error("域名配置解码失败");
+        const base = Convert.decodeUtf8(bytes.slice(0, -padding).buffer).trim().replace(/\/+$/, "");
+        // Only a public HTTPS hostname, never a path, local address, or IP literal.
+        if (!/^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/i.test(base)) throw new Error("域名配置不是有效 HTTPS 地址");
+        return base;
+    }
+
+    static async discoverApi() {
+        if (Lizimh._discoveryFlight) return Lizimh._discoveryFlight;
+        if (Date.now() < Lizimh._discoveryRetryAt) throw new Error("官方域名配置暂不可用，请稍后刷新");
+        Lizimh._discoveryRetryAt = Date.now() + 30000;
+        const pending = (async () => {
+            const names = ["adnet.lizimh.com", "adnet.lizi.lat"];
+            for (const name of names) {
+                // Independent official TXT records, with two HTTPS DNS providers.
+                const replies = await Promise.all(["https://dns.google/resolve", "https://dns.alidns.com/resolve"].map(async provider => {
+                    try {
+                        const response = await Lizimh.apiRequest(provider + "?name=" + name + "&type=TXT", 5000);
+                        if (response.status !== 200) return [];
+                        const dns = JSON.parse(response.body);
+                        return dns.Status === 0 && Array.isArray(dns.Answer) ? dns.Answer : [];
+                    } catch (_) { return []; }
+                }));
+                const checked = new Set();
+                for (const answers of replies) for (const answer of answers) {
+                    if (answer.type !== 16) continue;
+                    try {
+                        const base = Lizimh.decodeApiTxt(answer.data);
+                        if (checked.has(base)) continue;
+                        checked.add(base);
+                        // Public validation only; never send a personal token to a candidate.
+                        const response = await Lizimh.apiRequest(base + Lizimh.signedPath("/app/api/configv2"), 5000);
+                        const json = JSON.parse(response.body);
+                        if (response.status !== 200 || json.code !== 201 || !json.data || !json.data.cfg_general || !Array.isArray(json.data.cfg_comic_class)) continue;
+                        Lizimh.api = base; Lizimh.apiFallback = base; Lizimh._useFallback = false;
+                        return base;
+                    } catch (_) {}
+                }
+            }
+            throw new Error("官方域名配置未找到可用入口");
+        })();
+        Lizimh._discoveryFlight = pending;
+        try { return await pending; } finally { if (Lizimh._discoveryFlight === pending) Lizimh._discoveryFlight = null; }
+    }
+
+    static async getJson(path, recovered = false) {
         const bases = Lizimh._useFallback
             ? [Lizimh.apiFallback, Lizimh.api]
             : [Lizimh.api, Lizimh.apiFallback];
         const failures = [];
-        // DNS and TLS failures on this host are intermittent; retry each host
-        // once with a short delay before reporting a network error.
-        const wait = (ms) => new Promise((r) => setTimeout(() => r(null), ms));
-        for (const base of bases) {
+        for (const base of bases.filter((v, i, a) => a.indexOf(v) === i)) {
             try {
-                const res = await Network.get(base + Lizimh.signedPath(path), Lizimh.apiHeaders());
+                const res = await Lizimh.apiRequest(base + Lizimh.signedPath(path));
+                if (!res || res.error) throw new Error(String(res && res.error || "网络响应无效"));
                 if (res.status !== 200) throw new Error("HTTP " + res.status);
                 const json = JSON.parse(res.body);
                 if (json.code !== 201) {
-                    throw new Error("API code " + json.code + ": " + (json.msg || ""));
+                    // Business denials are not a reason to rotate domains or replay.
+                    const error = new Error("栗子接口拒绝请求（code " + String(json.code) + "），请在原应用核对服务或账号状态。");
+                    error.businessFailure = true;
+                    throw error;
                 }
+                if (json.data == null) throw new Error("接口缺少数据");
                 Lizimh._useFallback = base === Lizimh.apiFallback;
                 return json.data;
             } catch (e) {
-                // Keep credentials and signed query strings out of our errors.
-                let message = String(e);
+                if (e && e.businessFailure) throw e;
+                const message = String(e);
                 const http = message.match(/HTTP \d{3}/);
-                if (!http) {
-                    await wait(600);
-                    try {
-                        const retry = await Network.get(
-                            base + Lizimh.signedPath(path), Lizimh.apiHeaders());
-                        if (retry.status === 200) {
-                            const json2 = JSON.parse(retry.body);
-                            if (json2.code === 201) {
-                                Lizimh._useFallback = base === Lizimh.apiFallback;
-                                return json2.data;
-                            }
-                        }
-                        message = message + " (retry failed)";
-                    } catch (e2) {
-                        message = message + " (retry failed)";
-                    }
+                if (http && /HTTP (401|403|429)/.test(http[0])) {
+                    const denied = new Error("栗子接口 " + http[0] + "，请在原应用核对权限或稍后重试。");
+                    denied.businessFailure = true;
+                    throw denied;
                 }
-                failures.push(base + ": " + (http ? http[0] : "网络或响应格式错误"));
+                failures.push(base + ": " + (http ? http[0] : /dns|ENOTFOUND|11001|主机|域名/i.test(message) ? "域名解析失败" : /超时|timeout/i.test(message) ? "连接超时" : "网络或响应格式错误"));
             }
+        }
+        if (!recovered) {
+            try { await Lizimh.discoverApi(); return await Lizimh.getJson(path, true); }
+            catch (e) { if (e && e.businessFailure) throw e; failures.push("官方域名恢复未成功"); }
         }
         throw new Error("栗子接口请求失败 " + String(path).split("?")[0] + " (" + failures.join("; ") + ")");
     }
@@ -969,7 +1028,7 @@ class Lizimh extends ComicSource {
         try {
             let res = null;
             const bases = [Lizimh._useFallback ? Lizimh.apiFallback : Lizimh.api,
-                           Lizimh._useFallback ? Lizimh.api : Lizimh.apiFallback];
+                           Lizimh._useFallback ? Lizimh.api : Lizimh.apiFallback].filter((v, i, a) => a.indexOf(v) === i);
             for (let bi = 0; bi < bases.length && (!res || res.status !== 200); bi++) {
                 try {
                     res = await Network.get(
@@ -4142,7 +4201,7 @@ class LiziChapterMetadata {
         previousInstall.call(this);
         this._boundaryV4 = {};
         this._boundaryFlights = {};
-        this._nativeV23330 = { version: "1.2.3", responseContract: "ArrayBuffer" };
+        this._nativeV23330 = { version: "1.2.4", responseContract: "ArrayBuffer" };
         const config = this.imageLoadingConfig;
         const loading = (key, kind) => {
             const value = config.call(this, key);
@@ -4247,7 +4306,7 @@ class LiziChapterMetadata {
                     values = await Promise.all(remaining.map(exists));
                     first = remaining.find((page, index) => values[index]) || 0;
                 }
-                if (!first) { const _probeErr = new Error("栗子：未取得有效正文图片，已自动尝试全部图片线路仍未找到，请刷新目录。"); _probeErr.retryImageLine = true; throw _probeErr; }
+                if (!first) throw new Error("栗子：未取得有效正文图片，请刷新目录或更换可用线路。");
                 const grid = [];
                 for (let page = 25; page < limit; page += 25) grid.push(page);
                 if (!grid.includes(limit)) grid.push(limit);
