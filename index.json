@@ -3,7 +3,7 @@
     "name": "拷贝漫画",
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/copy_manga.js",
     "key": "copy_manga",
-    "version": "1.6.6"
+    "version": "1.6.7"
   },
   {
     "name": "Komiic",
@@ -219,7 +219,7 @@
     "name": "飞翔漫画",
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/ffppt.js",
     "key": "ffppt",
-    "version": "1.0.8"
+    "version": "1.0.3"
   },
   {
     "name": "古风漫画",
