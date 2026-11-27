@@ -60,6 +60,12 @@
     "version": "1.0.0"
   },
   {
+    "name": "18漫画",
+    "url": "https://cdn.jsdelivr.net/gh/venera-app/venera-configs@main/mh18.js",
+    "key": "mh18",
+    "version": "1.0.0"
+  },
+  {
     "name": "漫小肆",
     "url": "https://cdn.jsdelivr.net/gh/venera-app/venera-configs@main/mxs.js",
     "key": "mxs",
