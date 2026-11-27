@@ -42,6 +42,12 @@
     "version": "1.2.0"
   },
   {
+    "name": "优酷漫画 (修复版)",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/youku.js",
+    "key": "ykmh",
+    "version": "1.0.7"
+  },
+  {
     "name": "再漫画",
     "url": "https://cdn.jsdelivr.net/gh/venera-app/venera-configs@main/zaimanhua.js",
     "key": "zaimanhua",
@@ -102,6 +108,12 @@
     "version": "1.0.0"
   },
   {
+    "name": "MYCOMIC",
+    "url": "https://cdn.jsdelivr.net/gh/venera-app/venera-configs@main/mycomic.js",
+    "key": "mycomic",
+    "version": "1.1.0"
+  },
+  {
     "name": "动漫屋",
     "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/dm5.js",
     "key": "dm5",
@@ -124,6 +136,30 @@
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/guazi_manhua_v1.1.0.js",
     "key": "guazimanhua",
     "version": "1.0.4"
+  },
+  {
+    "name": "爱看漫",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/ikmmh_v2.js",
+    "key": "ikmmh_v2",
+    "version": "3.0.1"
+  },
+  {
+    "name": "来漫画（分流）",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/laimanhua_split_hosts_v1.2.1_configurable.js",
+    "key": "laimanhua_split",
+    "version": "1.2.1"
+  },
+  {
+    "name": "香蕉漫画",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/manhuauo_fixed_v2.js",
+    "key": "manhuauo_banana_v2",
+    "version": "1.0.3"
+  },
+  {
+    "name": "漫网",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/manwang_fixed_v120.js",
+    "key": "manwang",
+    "version": "1.2.0"
   },
   {
     "name": "4399漫画网",
