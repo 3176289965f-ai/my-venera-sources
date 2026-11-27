@@ -202,5 +202,101 @@
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/sunday_webry.js",
     "key": "sunday_webry",
     "version": "1.0.0"
+  },
+  {
+    "name": "知音漫客",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/zymk.js",
+    "key": "zymk",
+    "version": "1.0.0"
+  },
+  {
+    "name": "酸奶漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/suan_nai.js",
+    "key": "suan_nai",
+    "version": "1.0.0"
+  },
+  {
+    "name": "学外漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/xuewai.js",
+    "key": "xuewai",
+    "version": "1.0.0"
+  },
+  {
+    "name": "好看漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/haokan.js",
+    "key": "haokan",
+    "version": "1.0.0"
+  },
+  {
+    "name": "奈奈",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/nainai.js",
+    "key": "nainai",
+    "version": "1.0.0"
+  },
+  {
+    "name": "看漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/kanman.js",
+    "key": "kanman",
+    "version": "1.0.0"
+  },
+  {
+    "name": "名著阅读",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/mingzhu.js",
+    "key": "mingzhu",
+    "version": "1.0.0"
+  },
+  {
+    "name": "全免漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/kaimanhua.js",
+    "key": "kaimanhua",
+    "version": "1.0.0"
+  },
+  {
+    "name": "G站漫画",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/gmanhua.js",
+    "key": "gmanhua",
+    "version": "1.0.0"
+  },
+  {
+    "name": "漫客栈",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/mkzhan.js",
+    "key": "mkzhan",
+    "version": "1.0.0"
+  },
+  {
+    "name": "xmanhua",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/xmanhua.js",
+    "key": "xmanhua",
+    "version": "1.0.0"
+  },
+  {
+    "name": "漫蛙",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/manwa.js",
+    "key": "manwa",
+    "version": "1.0.0"
+  },
+  {
+    "name": "鸟鸟韩漫",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/niaoniao.js",
+    "key": "niaoniao",
+    "version": "1.0.0"
+  },
+  {
+    "name": "MANHUA18",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/manhua18.js",
+    "key": "manhua18",
+    "version": "1.0.0"
+  },
+  {
+    "name": "无遮韩漫",
+    "url": "https://cdn.jsdelivr.net/gh/3176289965f-ai/my-venera-sources@main/wuzhe.js",
+    "key": "wuzhe",
+    "version": "1.0.0"
+  },
+  {
+    "name": "快看漫画",
+    "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/kuaikanmanhua.js",
+    "key": "kuaikanmanhua",
+    "version": "1.0.0"
   }
 ]
