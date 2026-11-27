@@ -15,7 +15,7 @@
     "name": "包子漫画",
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/baozi.js",
     "key": "baozi",
-    "version": "1.1.8"
+    "version": "1.2.1"
   },
   {
     "name": "Picacg",
@@ -195,7 +195,7 @@
     "name": "嗶哩漫畫",
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/bilimanga.js",
     "key": "bilimanga",
-    "version": "1.1.7"
+    "version": "1.2.3"
   },
   {
     "name": "动漫屋",
@@ -243,7 +243,7 @@
     "name": "爱看漫",
     "url": "https://cdn.jsdelivr.net/gh/handahao666-boop/venera_comic_source@main/ikmmh_v2.js",
     "key": "ikmmh_v2",
-    "version": "3.0.0"
+    "version": "3.0.1"
   },
   {
     "name": "来漫画（分流）",
